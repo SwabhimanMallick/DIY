@@ -1,0 +1,346 @@
+#include <DallasTemperature.h>
+
+#include <LCD5110_Basic.h>
+LCD5110 myGLCD(9,  10,  11, 13,  12);
+//            (CLK, DIN, DC, RST, CE)
+
+extern unsigned char SmallFont[];
+extern unsigned char MediumNumbers[];
+extern unsigned char BigNumbers[];
+
+
+
+
+
+
+// Include the libraries we need
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+
+
+
+#define ONE_WIRE_BUS 2
+//#define ONE_WIRE_BUS1 D6
+
+
+
+float Celsius = 0;
+float Fahrenheit = 0;
+
+
+
+
+
+OneWire oneWire(ONE_WIRE_BUS);       // Setup a oneWire instance to (not just Maxim/Dallas temperature ICs)
+DallasTemperature sensors(&oneWire); // Pass our oneWire reference to Dallas Temperature.
+
+//OneWire oneWire1(ONE_WIRE_BUS1);       // Setup a oneWire instance to (not just Maxim/Dallas temperature ICs)
+//DallasTemperature sensors1(&oneWire1); // Pass our oneWire reference to Dallas Temperature.
+
+
+
+
+// rotary encoder //
+
+#define clk 5
+#define data 4
+
+
+
+// Rotary encoder //
+
+int counter = 0;
+int State;
+int LastState;
+
+
+
+//push buton //
+
+int buttonstate = 0;
+int p = 0;
+///float a = 27;
+int buttonpin = 3 ;
+int delayloop = 0;
+int delayloop2 = 0;
+
+
+
+
+// Heater //
+
+int Heater = 7;
+int led = 6;
+
+
+
+
+
+
+
+
+
+
+void setup() {
+
+
+  myGLCD.InitLCD();
+  myGLCD.clrScr();
+
+  sensors.begin();
+
+  pinMode(Heater, OUTPUT);
+  pinMode(led, OUTPUT);
+  pinMode (clk, INPUT);
+  pinMode (data, INPUT);
+  Serial.begin (9600);
+
+
+
+
+  pinMode(buttonpin, INPUT_PULLUP);
+
+
+  myGLCD.setFont(SmallFont);
+  myGLCD.print("Auto", CENTER, 8);
+  myGLCD.print("Cut", CENTER, 16);
+  myGLCD.print("Water", CENTER, 24);
+  myGLCD.print("Heater", CENTER, 32);
+  delay(3000);
+  myGLCD.clrScr();
+
+  
+
+  LastState = digitalRead(clk);
+
+}
+
+
+
+
+
+
+
+
+
+
+
+void loop()
+
+{
+
+
+
+  // sensorValue = analogRead(analogInPin);
+  State = digitalRead(clk);
+  buttonstate = digitalRead(buttonpin);
+
+
+
+
+
+
+
+
+
+  if (buttonstate == LOW)
+  {
+    p++;
+    delay(300);
+  }
+
+
+
+
+  if (p == 0)
+  {
+
+
+
+    myGLCD.setFont(SmallFont);
+    myGLCD.print("Set cut off", CENTER, 0);
+    myGLCD.print("value", CENTER, 8);
+    myGLCD.print("C'", 70, 32);
+
+
+
+    digitalWrite(Heater, HIGH);
+    digitalWrite(led, LOW);
+
+
+
+
+
+    if (State != LastState)
+
+    {
+      digitalWrite(Heater, HIGH);
+      digitalWrite(led, LOW);
+
+      if (digitalRead(data) != State)
+      {
+        counter++;
+        myGLCD.clrScr();
+      }
+      else
+      {
+        counter--;
+        myGLCD.clrScr();
+      }
+
+
+
+
+
+      if (counter > 100)
+      {
+        counter = 0;
+      }
+      if (counter < 0)
+      {
+        counter = 100;
+      }
+
+
+
+      myGLCD.setFont(BigNumbers);
+      myGLCD.printNumI(counter, 20, 24);
+
+    }
+    LastState = State;
+  }
+  LastState = State;
+
+
+
+
+
+
+  if (p == 1)
+  {
+
+
+
+
+    if (counter > Celsius)
+    {
+
+      sensors.requestTemperatures();
+      Celsius = sensors.getTempCByIndex(0);
+      // Fahrenheit = sensors.toFahrenheit(Celsius);
+      
+      delayloop++;
+
+
+      if (delayloop == 10)
+      {
+
+        for (int i = 0; i <= 1; i++);
+        {
+          myGLCD.clrScr();
+        }
+
+        digitalWrite(Heater, LOW);
+        digitalWrite(led, HIGH);
+        Serial.println("Relay ON");
+        Serial.println(counter);
+        Serial.println(Celsius);
+
+        myGLCD.setFont(MediumNumbers);
+        myGLCD.printNumI(Celsius, CENTER, 32);
+
+        myGLCD.setFont(SmallFont);
+
+        myGLCD.print("Cut off =", 3, 8);
+        myGLCD.printNumI(counter, 61, 8);
+
+        myGLCD.print("Water Celsius", CENTER, 24);
+
+        myGLCD.print("Heater = ON", CENTER, 0);
+      }
+
+      if (delayloop > 10)
+      {
+        delayloop = 0;
+      }
+
+
+      // delay(100);
+
+
+
+
+
+    }
+
+
+    else
+
+
+    {
+
+      delayloop2++;
+
+      if (delayloop2 == 10)
+      {
+
+
+
+        for (int i = 0; i <= 1; i++);
+        {
+          myGLCD.clrScr();
+        }
+
+        int Celsius0 = Celsius;
+
+        myGLCD.setFont(SmallFont);
+        myGLCD.print("Heater has", 8, 0);
+
+        myGLCD.print("turned off at", 0, 8);
+        myGLCD.printNumI(counter, CENTER, 16);
+
+        myGLCD.print("Water Celsius", CENTER, 24);
+        myGLCD.setFont(MediumNumbers);
+        myGLCD.printNumI(Celsius0, CENTER, 32);
+
+        Serial.println("Relay OFF");
+        Serial.println(counter);
+        Serial.println(Celsius0);
+
+        digitalWrite(Heater, HIGH);
+        digitalWrite(led, LOW);
+      }
+
+
+      if (delayloop2 > 20)
+      {
+        delayloop2 = 0;
+      }
+
+
+
+      delay(100);
+
+    }
+  }
+
+
+
+
+
+
+  if (p == 2)
+  {
+
+    myGLCD.clrScr();
+    p = 0;
+    //a = 0;
+
+  }
+
+
+
+
+
+}
